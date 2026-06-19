@@ -62,6 +62,22 @@ docker compose up --build
 
 Because the compose file does not pin container names, repeated runs will not collide with older containers from the same project.
 
+## Troubleshooting
+
+If startup fails on a fresh machine, check these first:
+
+- `docker compose` says a port is already in use:
+  - Stop the process using that port or change the port mapping in `docker-compose.yml`
+  - Common ports used here are `5432`, `29092`, `8081`, and `8082`
+- You see leftover Docker containers or volumes from an earlier run:
+  - Run `docker compose down -v` from the repository root
+  - If needed, remove stale containers manually with `docker ps -a`
+- The services start but cannot connect to Postgres or Kafka:
+  - Make sure you are running `docker compose up --build` from the repository root
+  - Confirm Docker Desktop is running and healthy
+- You cloned the repo into a parent folder and started Compose from the wrong directory:
+  - `cd` into the cloned repository directory first, then run `docker compose up --build`
+
 ## API Endpoints
 
 All tenant-aware HTTP endpoints require:
