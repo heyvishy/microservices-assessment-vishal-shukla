@@ -18,6 +18,7 @@ services:
 
   kafka:
     image: apache/kafka:3.7.1
+    hostname: kafka
     mem_limit: 1g
     ports:
       - "29092:29092"
@@ -43,10 +44,7 @@ services:
       retries: 20
 
   order-service:
-    build:
-      context: .
-      dockerfile: order-service/Dockerfile
-    image: loadup/order-service:local
+    image: shukla81/order-service:1.0.0
     mem_limit: 640m
     environment:
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=65.0 -XX:InitialRAMPercentage=25.0
@@ -65,10 +63,7 @@ services:
         condition: service_healthy
 
   notification-service:
-    build:
-      context: .
-      dockerfile: notification-service/Dockerfile
-    image: loadup/notification-service:local
+    image: shukla81/notification-service:1.0.0
     mem_limit: 640m
     environment:
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=65.0 -XX:InitialRAMPercentage=25.0
