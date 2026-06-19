@@ -63,8 +63,8 @@ public class OrderOutboxPublisher {
                 kafkaTemplate.send(orderOutboxEntity.getTopic(), orderOutboxEntity.getEventKey(), event).get(10, TimeUnit.SECONDS);
                 orderOutboxEntity.markPublished();
                 orderOutboxRepository.save(orderOutboxEntity);
-                log.info("Outbox published tenantId={} outboxId={} eventType={} aggregateId={}",
-                        TenantContext.requireTenantId(), orderOutboxEntity.getId(), orderOutboxEntity.getEventType(), orderOutboxEntity.getAggregateId());
+                log.info("Outbox published tenantId={} outboxId={} eventType={} objectId={}",
+                        TenantContext.requireTenantId(), orderOutboxEntity.getId(), orderOutboxEntity.getEventType(), orderOutboxEntity.getObjectId());
             } catch (Exception ex) {
                 orderOutboxEntity.markFailed(safeMessage(ex));
                 orderOutboxRepository.save(orderOutboxEntity);

@@ -18,10 +18,10 @@ public class OrderOutboxEntity {
     private UUID id;
 
     @Column(nullable = false, length = 100)
-    private String aggregateType;
+    private String objectType;
 
     @Column(nullable = false)
-    private UUID aggregateId;
+    private UUID objectId;
 
     @Column(nullable = false, length = 100)
     private String eventType;
@@ -46,11 +46,11 @@ public class OrderOutboxEntity {
     @Column(length = 1000)
     private String lastError;
 
-    public static OrderOutboxEntity of(final UUID aggregateId, final String eventType, final String topic, final String eventKey, final String payload) {
+    public static OrderOutboxEntity of(final UUID objectId, final String eventType, final String topic, final String eventKey, final String payload) {
         OrderOutboxEntity orderOutboxEntity = new OrderOutboxEntity();
         orderOutboxEntity.id = UUID.randomUUID();
-        orderOutboxEntity.aggregateType = "ORDER";
-        orderOutboxEntity.aggregateId = aggregateId;
+        orderOutboxEntity.objectType = "ORDER";
+        orderOutboxEntity.objectId = objectId;
         orderOutboxEntity.eventType = eventType;
         orderOutboxEntity.topic = topic;
         orderOutboxEntity.eventKey = eventKey;

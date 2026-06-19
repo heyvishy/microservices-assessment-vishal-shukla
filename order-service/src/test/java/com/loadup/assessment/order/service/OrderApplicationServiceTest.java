@@ -5,6 +5,7 @@ import com.loadup.assessment.order.config.DataSourceConfig;
 import com.loadup.assessment.order.dto.OrderCreateRequest;
 import com.loadup.assessment.order.dto.OrderUpdateRequest;
 import com.loadup.assessment.order.constants.OrderStatus;
+import com.loadup.assessment.order.domain.OrderOutboxEntity;
 import com.loadup.assessment.order.exception.OrderConflictException;
 import com.loadup.assessment.order.repository.OrderOutboxRepository;
 import com.loadup.assessment.order.repository.OrderRepository;
@@ -68,6 +69,9 @@ class OrderApplicationServiceTest {
         assertNotNull(order.getUpdatedAt());
         assertEquals(order.getCreatedAt(), order.getUpdatedAt());
         assertEquals(1, outboxRepository.count());
+        OrderOutboxEntity outboxEntry = outboxRepository.findAll().get(0);
+        assertEquals("ORDER", outboxEntry.getObjectType());
+        assertEquals(order.getId(), outboxEntry.getObjectId());
         TenantContext.clear();
         TenantContext.setTenantId("tenant-b");
         assertEquals(0, orderRepository.count());
