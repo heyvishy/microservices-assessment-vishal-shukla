@@ -61,11 +61,14 @@ Both services use tenant-aware routing with the `X-Tenant-Id` header.
 
 ### Production Readiness
 
-- Add authn/authz so callers cannot choose arbitrary tenants.
-- Add metrics and alerts for outbox lag, publish failures, and consume failures.
-- Add stronger retry and dead-letter handling for Kafka and database outages.
-- Add readiness and liveness tuning plus rollout safeguards for deployment.
-- Add backup, restore, and retention policies before real production use.
+- AuthN/AuthZ.
+- Better observability with more logging/tracing.
+- Potential multi-tenancy improvements and explicit `DefaultTenantId` handling for fallback datasource.
+- Improved validation on order requests.
+- DLQ/error handling improvements.
+- More test coverage and more scenarios.
+- SonarQube quality checks in the build.
+- Enable virtual threads for better scalability.
 
 ## Assumptions And Dependencies
 
