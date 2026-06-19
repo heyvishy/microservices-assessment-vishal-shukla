@@ -45,18 +45,22 @@ This runs the unit tests for all modules. The notification service also contains
 
 ### Run The Full System
 
-From the repo root:
+After cloning the repo, change into the repository directory and start the stack:
 
 ```bash
+git clone git@github.com:heyvishy/microservices-assessment-vishal-shukla.git
+cd microservices-assessment-vishal-shukla
 docker compose up --build
 ```
 
-If you want a clean restart:
+If you want a clean restart, stop the stack and remove volumes first:
 
 ```bash
 docker compose down -v
 docker compose up --build
 ```
+
+Because the compose file does not pin container names, repeated runs will not collide with older containers from the same project.
 
 ## API Endpoints
 
