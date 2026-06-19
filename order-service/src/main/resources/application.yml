@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: order-service
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        default_schema: ${app.schema}
+  flyway:
+    enabled: false
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+app:
+  schema: order_service
+  flyway-location: classpath:db/order-migration
+  kafka:
+    order-topic: orders.events.v1
+    outbox-publish-delay-ms: ${OUTBOX_PUBLISH_DELAY_MS:500}
+  tenants:
+    tenant-a:
+      url: ${ORDER_TENANT_A_JDBC_URL:jdbc:postgresql://localhost:5432/tenant_a_db}
+      username: ${ORDER_TENANT_DB_USERNAME:order_app}
+      password: ${ORDER_TENANT_DB_PASSWORD:order_app}
+    tenant-b:
+      url: ${ORDER_TENANT_B_JDBC_URL:jdbc:postgresql://localhost:5432/tenant_b_db}
+      username: ${ORDER_TENANT_DB_USERNAME:order_app}
+      password: ${ORDER_TENANT_DB_PASSWORD:order_app}
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%thread] %logger{36} trace=%X{traceId:-} span=%X{spanId:-} tenant=%X{tenantId:-} - %msg%n"

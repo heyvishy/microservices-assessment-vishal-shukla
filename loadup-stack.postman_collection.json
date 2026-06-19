@@ -1,0 +1,451 @@
+{
+  "info": {
+    "_postman_id": "3f5a58d3-10f4-4f2a-a6f4-1f6fd1c0c9ad",
+    "name": "LoadUp Stack APIs",
+    "description": "Postman collection for the order-service and notification-service APIs.\n\nCurrent tenancy model:\n- `tenant-a` routes to `tenant_a_db`.\n- `tenant-b` routes to `tenant_b_db`.\n- Each tenant database contains the `order_service` and `notification_service` schemas.\n\nUsage:\n- Set `orderServiceUrl` and `notificationServiceUrl` to your running service URLs.\n- Set `tenantId` to `tenant-a` or `tenant-b`.\n- Keep `otherTenantId` set to the opposite tenant for the isolation check.\n- Run Create Order first; it saves the returned ID into `orderId`.\n- Run Update Order, Cancel Order, and then List Notifications. Notification creation is asynchronous through Kafka.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "orderServiceUrl",
+      "value": "http://localhost:8081"
+    },
+    {
+      "key": "notificationServiceUrl",
+      "value": "http://localhost:8082"
+    },
+    {
+      "key": "tenantId",
+      "value": "tenant-a"
+    },
+    {
+      "key": "otherTenantId",
+      "value": "tenant-b"
+    },
+    {
+      "key": "orderId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Order Service",
+      "item": [
+        {
+          "name": "Create Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Order is created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test('New order starts as CONFIRMED', function () {",
+                  "    pm.expect(body.status).to.eql('CONFIRMED');",
+                  "});",
+                  "pm.collectionVariables.set('orderId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"CUST-1001\",\n  \"customerEmail\": \"customer@example.com\",\n  \"description\": \"Deliver two boxed items\",\n  \"totalAmount\": 129.99,\n  \"currency\": \"USD\"\n}"
+            },
+            "url": {
+              "raw": "{{orderServiceUrl}}/api/v1/orders",
+              "host": [
+                "{{orderServiceUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders"
+              ]
+            },
+            "description": "Create a new order for the active tenant."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Order By Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Order is returned', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('orderId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{orderServiceUrl}}/api/v1/orders/{{orderId}}",
+              "host": [
+                "{{orderServiceUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderId}}"
+              ]
+            },
+            "description": "Fetch a single order using the orderId saved from the create request."
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Tenant Isolation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Order is not visible to another tenant', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{otherTenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{orderServiceUrl}}/api/v1/orders/{{orderId}}",
+              "host": [
+                "{{orderServiceUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderId}}"
+              ]
+            },
+            "description": "Confirm that an order created for tenantId cannot be read through otherTenantId."
+          },
+          "response": []
+        },
+        {
+          "name": "List Orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{orderServiceUrl}}/api/v1/orders",
+              "host": [
+                "{{orderServiceUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders"
+              ]
+            },
+            "description": "List all orders for the active tenant."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Order moves to PROCESSING', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql('PROCESSING');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PROCESSING\",\n  \"description\": \"Order is being processed\"\n}"
+            },
+            "url": {
+              "raw": "{{orderServiceUrl}}/api/v1/orders/{{orderId}}",
+              "host": [
+                "{{orderServiceUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderId}}"
+              ]
+            },
+            "description": "Move the newly created CONFIRMED order to PROCESSING."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Order is canceled', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql('CANCELED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Customer requested cancellation\"\n}"
+            },
+            "url": {
+              "raw": "{{orderServiceUrl}}/api/v1/orders/{{orderId}}/cancel",
+              "host": [
+                "{{orderServiceUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderId}}",
+                "cancel"
+              ]
+            },
+            "description": "Cancel an order. The body is optional in the API, but a reason example is included."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Notification Service",
+      "item": [
+        {
+          "name": "List Notifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Notifications endpoint responds', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});",
+                  "const orderId = pm.collectionVariables.get('orderId');",
+                  "const orderNotifications = pm.response.json().filter(item => item.orderId === orderId);",
+                  "pm.test('Order events reached notification-service', function () {",
+                  "    pm.expect(orderNotifications.length).to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{notificationServiceUrl}}/api/v1/notifications",
+              "host": [
+                "{{notificationServiceUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications"
+              ]
+            },
+            "description": "List notifications visible to the active tenant. Kafka delivery is asynchronous; retry briefly if this is run immediately after an order operation."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Smoke / Actuator",
+      "item": [
+        {
+          "name": "Order Service Health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{orderServiceUrl}}/actuator/health",
+              "host": [
+                "{{orderServiceUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
+            },
+            "description": "Basic health check for order-service."
+          },
+          "response": []
+        },
+        {
+          "name": "Order Service Info",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{orderServiceUrl}}/actuator/info",
+              "host": [
+                "{{orderServiceUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "info"
+              ]
+            },
+            "description": "Info endpoint for order-service."
+          },
+          "response": []
+        },
+        {
+          "name": "Order Service Metrics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{orderServiceUrl}}/actuator/metrics",
+              "host": [
+                "{{orderServiceUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "metrics"
+              ]
+            },
+            "description": "Metrics index for order-service."
+          },
+          "response": []
+        },
+        {
+          "name": "Notification Service Health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{notificationServiceUrl}}/actuator/health",
+              "host": [
+                "{{notificationServiceUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
+            },
+            "description": "Basic health check for notification-service."
+          },
+          "response": []
+        },
+        {
+          "name": "Notification Service Info",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{notificationServiceUrl}}/actuator/info",
+              "host": [
+                "{{notificationServiceUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "info"
+              ]
+            },
+            "description": "Info endpoint for notification-service."
+          },
+          "response": []
+        },
+        {
+          "name": "Notification Service Metrics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{notificationServiceUrl}}/actuator/metrics",
+              "host": [
+                "{{notificationServiceUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "metrics"
+              ]
+            },
+            "description": "Metrics index for notification-service."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

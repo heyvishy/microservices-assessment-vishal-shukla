@@ -1,0 +1,55 @@
+spring:
+  application:
+    name: notification-service
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        default_schema: ${app.schema}
+  flyway:
+    enabled: false
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+    consumer:
+      group-id: notification-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+app:
+  schema: notification_service
+  flyway-location: classpath:db/notification-migration
+  kafka:
+    order-topic: orders.events.v1
+  tenants:
+    tenant-a:
+      url: ${NOTIFICATION_TENANT_A_JDBC_URL:jdbc:postgresql://localhost:5432/tenant_a_db}
+      username: ${NOTIFICATION_TENANT_DB_USERNAME:notification_app}
+      password: ${NOTIFICATION_TENANT_DB_PASSWORD:notification_app}
+    tenant-b:
+      url: ${NOTIFICATION_TENANT_B_JDBC_URL:jdbc:postgresql://localhost:5432/tenant_b_db}
+      username: ${NOTIFICATION_TENANT_DB_USERNAME:notification_app}
+      password: ${NOTIFICATION_TENANT_DB_PASSWORD:notification_app}
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%thread] %logger{36} trace=%X{traceId:-} span=%X{spanId:-} tenant=%X{tenantId:-} - %msg%n"
