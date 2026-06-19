@@ -18,6 +18,55 @@ The system uses an outbox-driven workflow:
 
 Both services use tenant-aware routing with the `X-Tenant-Id` header.
 
+## Architecture
+
+### System Design
+
+- `order-service` owns order writes and outbox creation.
+- `notification-service` owns event consumption and notification persistence.
+- The services communicate asynchronously through Kafka, which avoids synchronous coupling and keeps order creation fast.
+- The shared event contract lives in the same repo for this submission so the build stays clone-and-run friendly without a separate artifact repository.
+
+### Multi-Tenancy Design
+
+- Tenant isolation is a platform principle here, not just a database column.
+- Each tenant gets its own PostgreSQL database, and each service owns its own schema inside that tenant database.
+- HTTP requests are routed through tenant-aware filters, and the application routes to the correct data source before any persistence call happens.
+- This keeps tenant separation consistent across API, service, and database layers.
+
+### Tenant Context Propagation
+
+- Inbound requests carry `X-Tenant-Id`.
+- The tenant filter validates the header and stores the tenant in request context and MDC.
+- Service methods require tenant context before executing business logic.
+- The routing data source resolves the target database from that context.
+- Kafka events carry the tenant ID so the consumer can restore context before writing to the database.
+
+### Resilience And Failure Handling
+
+- The outbox pattern prevents order writes from being lost if Kafka publishing fails.
+- The notification consumer is idempotent, so duplicate event delivery does not create duplicate notifications.
+- Missing or unknown tenant requests fail fast with clear `400` responses.
+- Not-found and conflict cases return explicit API errors rather than generic server failures.
+- If a service or dependency is unavailable, the system prefers consistency and retryable recovery over silent data loss.
+
+### Industry Standards Applied
+
+- Outbox pattern: chosen to keep database writes and event publishing consistent.
+- Idempotent consumer: chosen to tolerate Kafka retries and duplicate delivery.
+- Schema-per-service inside tenant databases: chosen to keep service ownership clear while still isolating tenants.
+- `ProblemDetail` responses: chosen for predictable, standard error payloads.
+- Structured logging with trace and tenant context: chosen to make production debugging practical.
+- Testcontainers integration tests: chosen to verify the system against real Postgres and Kafka behavior.
+
+### Production Readiness
+
+- Add authn/authz so callers cannot choose arbitrary tenants.
+- Add metrics and alerts for outbox lag, publish failures, and consume failures.
+- Add stronger retry and dead-letter handling for Kafka and database outages.
+- Add readiness and liveness tuning plus rollout safeguards for deployment.
+- Add backup, restore, and retention policies before real production use.
+
 ## Assumptions And Dependencies
 
 - Java 21 or higher
